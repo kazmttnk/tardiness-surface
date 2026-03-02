@@ -17,10 +17,30 @@ let syncTimer = null;
 window.onload = async function() {
   setupBarcodeInput();
   setupKeyboardShortcuts();
+  setupButtons();
   await loadInitData();
   startSyncTimer();
   updatePendingCount();
 };
+
+// ============================================================
+// ボタンのイベントリスナー設定
+// ============================================================
+function setupButtons() {
+  // 保存ボタン
+  document.getElementById('saveBtn').addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    saveRecord();
+  });
+  
+  // キャンセルボタン
+  document.getElementById('cancelBtn').addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    resetForm();
+  });
+}
 
 // ============================================================
 // 初期化データ一括取得
