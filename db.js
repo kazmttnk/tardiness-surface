@@ -1,7 +1,7 @@
 // IndexedDB 管理
 
 const DB_NAME = 'TardinessDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;  // バージョンアップ
 const STORE_NAME = 'pendingRecords';
 
 let db = null;
@@ -27,16 +27,19 @@ async function initDB() {
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
       
-      // オブジェクトストアを作成
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        const objectStore = db.createObjectStore(STORE_NAME, { 
-          keyPath: 'id', 
-          autoIncrement: true 
-        });
-        objectStore.createIndex('timestamp', 'timestamp', { unique: false });
-        objectStore.createIndex('synced', 'synced', { unique: false });
-        console.log('Object store created');
+      // 古いストアがあれば削除
+      if (db.objectStoreNames.contains(STORE_NAME)) {
+        db.deleteObjectStore(STORE_NAME);
       }
+      
+      // オブジェクトストアを作成
+      const objectStore = db.createObjectStore(STORE_NAME, { 
+        keyPath: 'id', 
+        autoIncrement: true 
+      });
+      objectStore.createIndex('timestamp', 'timestamp', { unique: false });
+      objectStore.createIndex('synced', 'synced', { unique: false });  // 数値型
+      console.log('Object store created');
     };
   });
 }
@@ -54,7 +57,7 @@ async function saveToLocal(recordData) {
     const record = {
       ...recordData,
       timestamp: new Date().toISOString(),
-      synced: false
+      synced: 0  // 0 = 未同期
     };
     
     const request = objectStore.add(record);
@@ -82,8 +85,8 @@ async function getPendingRecords() {
     const objectStore = transaction.objectStore(STORE_NAME);
     const index = objectStore.index('synced');
     
-    // IDBKeyRange を使用して false のレコードのみ取得
-    const request = index.getAll(IDBKeyRange.only(false));
+    // synced = 0 のレコードのみ取得
+    const request = index.getAll(0);
     
     request.onsuccess = () => {
       console.log('Pending records:', request.result.length);
@@ -112,7 +115,7 @@ async function markAsSynced(id) {
     request.onsuccess = () => {
       const record = request.result;
       if (record) {
-        record.synced = true;
+        record.synced = 1;  // 1 = 同期済み
         const updateRequest = objectStore.put(record);
         
         updateRequest.onsuccess = () => {
@@ -145,8 +148,8 @@ async function deleteSyncedRecords() {
     const objectStore = transaction.objectStore(STORE_NAME);
     const index = objectStore.index('synced');
     
-    // IDBKeyRange を使用して true のレコードのみ削除
-    const request = index.openCursor(IDBKeyRange.only(true));
+    // synced = 1 のレコードのみ削除
+    const request = index.openCursor(IDBKeyRange.only(1));
     let deletedCount = 0;
     
     request.onsuccess = (event) => {
