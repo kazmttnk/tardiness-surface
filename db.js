@@ -82,7 +82,8 @@ async function getPendingRecords() {
     const objectStore = transaction.objectStore(STORE_NAME);
     const index = objectStore.index('synced');
     
-    const request = index.getAll(false);
+    // IDBKeyRange を使用して false のレコードのみ取得
+    const request = index.getAll(IDBKeyRange.only(false));
     
     request.onsuccess = () => {
       console.log('Pending records:', request.result.length);
@@ -144,6 +145,7 @@ async function deleteSyncedRecords() {
     const objectStore = transaction.objectStore(STORE_NAME);
     const index = objectStore.index('synced');
     
+    // IDBKeyRange を使用して true のレコードのみ削除
     const request = index.openCursor(IDBKeyRange.only(true));
     let deletedCount = 0;
     
