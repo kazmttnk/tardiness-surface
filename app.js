@@ -168,15 +168,6 @@ function setupBarcodeInput() {
       }, 100);
     }
   });
-  
-  // フォーカスが外れたら戻す
-  input.addEventListener('blur', function() {
-    setTimeout(() => {
-      if (!document.getElementById('modalOverlay').classList.contains('show')) {
-        input.focus();
-      }
-    }, 100);
-  });
 }
 
 // ============================================================
