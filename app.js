@@ -309,7 +309,7 @@ function renderReasons() {
     (function(reason, index) {
       const btn = document.createElement('button');
       btn.className = 'reason-btn';
-      btn.type = 'button';
+      btn.type = 'button';  // 重要：type="button" を設定
       btn.tabIndex = 2 + index;
       
       // ショートカットキー表示（1〜9のみ）
@@ -323,9 +323,12 @@ function renderReasons() {
       const text = document.createTextNode(reason.display);
       btn.appendChild(text);
       
-      btn.onclick = function() {
+      // イベントリスナーで処理
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
         selectReason(index);
-      };
+      });
       
       grid.appendChild(btn);
     })(reasonList[i], i);
