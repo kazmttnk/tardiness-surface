@@ -13,24 +13,27 @@
     <!-- ヘッダー -->
     <div class="header">
       <h1>朝の遅刻者記録システム</h1>
-      <div class="gate-time">門限時刻: <span id="gateTime">8:20</span></div>
-      <div class="status-bar">
-        <span id="syncStatus" class="sync-status">同期済み</span>
-        <span id="pendingCount" class="pending-count hidden">未送信: 0件</span>
+      <div class="header-right">
+        <div class="gate-time">門限時刻:<span id="gateTime">8:20</span></div>
+        <div class="status-bar">
+          <span id="syncStatus" class="sync-status">同期済み</span>
+          <span id="pendingCount" class="pending-count hidden">未送信: 0件</span>
+        </div>
       </div>
     </div>
 
     <div id="alertBox" class="hidden"></div>
 
-    <!-- メインカード -->
-    <div class="main-card">
-      <!-- バーコード入力セクション -->
-      <div class="input-section">
-        <label class="input-label">
-          生徒証番号を入力してください
-          <span class="hint">（バーコードをスキャン）</span>
-        </label>
-        <div class="barcode-area">
+    <!-- メインエリア（2カラム） -->
+    <div class="main-area">
+      <!-- 左カラム：生徒情報 -->
+      <div class="left-column">
+        <!-- バーコード入力 -->
+        <div class="input-section">
+          <label class="input-label">
+            生徒証番号を入力してください
+            <span class="hint">（バーコードをスキャン）</span>
+          </label>
           <input 
             type="text" 
             id="barcodeInput" 
@@ -42,69 +45,78 @@
             maxlength="6"
             tabindex="1">
         </div>
+
+        <!-- 生徒情報表示 -->
+        <div id="studentInfo" class="student-info-section">
+          <div class="info-row">
+            <span class="info-label">生徒証番号</span>
+            <span class="info-value" id="displayStudentId">-</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">氏名</span>
+            <span class="info-value" id="displayName">-</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">クラス</span>
+            <span class="info-value" id="displayClass">-</span>
+          </div>
+        </div>
       </div>
 
-      <!-- 生徒情報表示 -->
-      <div id="studentInfo" class="student-info">
-        <div class="info-row">
-          <span class="info-label">生徒証番号</span>
-          <span class="info-value" id="displayStudentId">-</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">氏名</span>
-          <span class="info-value" id="displayName">-</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">クラス</span>
-          <span class="info-value" id="displayClass">-</span>
-        </div>
-
-        <!-- 遅刻理由選択 -->
-        <div class="reason-section">
+      <!-- 右カラム：理由選択＋記録 -->
+      <div class="right-column">
+        <!-- 理由選択カード -->
+        <div class="reason-card">
           <label class="input-label">
             遅刻理由を選択してください
             <span class="hint">（数字キー 1〜9 または タッチ）</span>
           </label>
-          <div id="reasonGrid" class="reason-grid"></div>
-          <textarea 
-            id="detailInput" 
-            class="detail-input" 
-            placeholder="詳細（任意）"
-            tabindex="10"></textarea>
+          
+          <div class="reason-content">
+            <div class="reason-grid-wrapper">
+              <div id="reasonGrid" class="reason-grid"></div>
+            </div>
+            
+            <textarea 
+              id="detailInput" 
+              class="detail-input" 
+              placeholder="詳細（任意）"
+              tabindex="10"></textarea>
+
+            <!-- チェックボックス -->
+            <div class="checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="hasPhoneCall" tabindex="11">
+                電話連絡あり
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" id="hasStudentCard" tabindex="12">
+                生徒証あり
+              </label>
+            </div>
+
+            <!-- アクションボタン -->
+            <div class="action-buttons">
+              <button type="button" class="btn btn-secondary" id="cancelBtn" tabindex="14">
+                キャンセル<span class="shortcut">Esc</span>
+              </button>
+              <button type="button" class="btn btn-primary" id="saveBtn" tabindex="13">
+                記録を保存<span class="shortcut">Enter</span>
+              </button>
+            </div>
+          </div>
         </div>
 
-        <!-- チェックボックス -->
-        <div class="checkbox-group">
-          <label class="checkbox-label">
-            <input type="checkbox" id="hasPhoneCall" tabindex="11">
-            電話連絡あり
-          </label>
-          <label class="checkbox-label">
-            <input type="checkbox" id="hasStudentCard" tabindex="12">
-            生徒証あり
-          </label>
+        <!-- 本日の記録 -->
+        <div class="records-card">
+          <div class="records-header">
+            <span>本日の記録</span>
+            <span class="record-count" id="recordCount">0件</span>
+          </div>
+          <div id="recordsList" class="records-list">
+            <div class="loading"><div class="spinner"></div>読み込み中...</div>
+          </div>
         </div>
-
-        <!-- アクションボタン -->
-        <div class="action-buttons">
-          <button type="button" class="btn btn-secondary" id="cancelBtn" tabindex="14">
-            キャンセル<span class="shortcut">Esc</span>
-          </button>
-          <button type="button" class="btn btn-primary" id="saveBtn" tabindex="13">
-            記録を保存<span class="shortcut">Enter</span>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 本日の記録 -->
-    <div class="records-card">
-      <div class="records-header">
-        <span>本日の記録</span>
-        <span class="record-count" id="recordCount">0件</span>
-      </div>
-      <div id="recordsList" class="records-list">
-        <div class="loading"><div class="spinner"></div>読み込み中...</div>
       </div>
     </div>
   </div>
