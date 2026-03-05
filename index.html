@@ -11,7 +11,7 @@
 <body>
   <div class="container">
     <!-- メインエリア（2カラム） -->
-    <div class="main-area">
+    <div class="main-area" id="normalMode">
       <!-- 左カラム -->
       <div class="left-column">
         <!-- ヘッダー情報 -->
@@ -40,6 +40,11 @@
           
           <label class="section-label" style="margin-top: 12px;">生徒情報</label>
           <div id="studentDisplay" class="student-display">－</div>
+          
+          <!-- バッチモード切り替えボタン -->
+          <button type="button" class="btn btn-batch" id="switchBatchBtn" onclick="switchToBatchMode()">
+            📦 バッチ処理モードに切り替え
+          </button>
         </div>
 
         <!-- 本日の記録 -->
@@ -88,6 +93,60 @@
               </button>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- バッチモード画面 -->
+    <div class="batch-mode hidden" id="batchMode">
+      <div class="batch-container">
+        <!-- ヘッダー -->
+        <div class="batch-header">
+          <h1>📦 バッチ処理モード</h1>
+          <div class="batch-info">
+            <span id="batchSyncStatus" class="sync-status">同期済み</span>
+            <span id="batchPendingCount" class="pending-count hidden">未送信: 0件</span>
+          </div>
+        </div>
+
+        <!-- 理由選択 -->
+        <div class="batch-reason-section">
+          <label class="batch-label">遅刻理由を選択してください</label>
+          <div id="batchReasonGrid" class="batch-reason-grid"></div>
+          
+          <div class="batch-selected-reason hidden" id="batchSelectedReason">
+            <div class="selected-reason-label">選択中の理由:</div>
+            <div class="selected-reason-text" id="selectedReasonText">未選択</div>
+          </div>
+        </div>
+
+        <!-- バーコード入力 -->
+        <div class="batch-input-section">
+          <label class="batch-label">生徒証をスキャンしてください</label>
+          <input 
+            type="text" 
+            id="batchBarcodeInput" 
+            class="batch-barcode-input" 
+            placeholder="バーコードをスキャン" 
+            autocomplete="off" 
+            inputmode="numeric" 
+            maxlength="6">
+          
+          <div class="batch-count">処理済み: <span id="batchProcessedCount">0</span>件</div>
+        </div>
+
+        <!-- 処理済みリスト -->
+        <div class="batch-records">
+          <div id="batchRecordsList" class="batch-records-list">
+            <div class="batch-empty">まだ処理されていません</div>
+          </div>
+        </div>
+
+        <!-- 戻るボタン -->
+        <div class="batch-actions">
+          <button type="button" class="btn btn-large btn-secondary" onclick="switchToNormalMode()">
+            ← 通常モードに戻る
+          </button>
         </div>
       </div>
     </div>
