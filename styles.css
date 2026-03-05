@@ -500,3 +500,212 @@ body {
   0% { transform: rotate(0deg); } 
   100% { transform: rotate(360deg); } 
 }
+
+/* ========== バッチモード ========== */
+.batch-mode {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+  z-index: 2000;
+}
+
+.batch-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.batch-header {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.batch-header h1 {
+  font-size: 24px;
+  color: #333;
+}
+
+.batch-info {
+  display: flex;
+  gap: 12px;
+}
+
+.batch-label {
+  display: block;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 12px;
+}
+
+/* 理由選択 */
+.batch-reason-section {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.batch-reason-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.batch-selected-reason {
+  margin-top: 16px;
+  padding: 16px;
+  background: #667eea;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.selected-reason-label {
+  font-size: 14px;
+  color: rgba(255,255,255,0.9);
+  margin-bottom: 4px;
+}
+
+.selected-reason-text {
+  font-size: 24px;
+  font-weight: 700;
+  color: white;
+}
+
+/* バーコード入力 */
+.batch-input-section {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.batch-barcode-input {
+  width: 100%;
+  padding: 20px;
+  font-size: 32px;
+  border: 3px solid #667eea;
+  border-radius: 12px;
+  text-align: center;
+  font-weight: 600;
+  letter-spacing: 4px;
+  transition: all 0.3s;
+  margin-bottom: 16px;
+}
+
+.batch-barcode-input:focus {
+  outline: none;
+  border-color: #764ba2;
+  box-shadow: 0 0 0 4px rgba(102,126,234,0.1);
+}
+
+.batch-count {
+  text-align: center;
+  font-size: 20px;
+  font-weight: 600;
+  color: #667eea;
+}
+
+.batch-count span {
+  font-size: 32px;
+  color: #764ba2;
+}
+
+/* 処理済みリスト */
+.batch-records {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.batch-records-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.batch-empty {
+  text-align: center;
+  padding: 40px;
+  color: #999;
+  font-size: 16px;
+}
+
+.batch-record-item {
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.batch-record-info {
+  flex: 1;
+}
+
+.batch-record-student {
+  font-size: 16px;
+  font-weight: 700;
+  color: #333;
+}
+
+.batch-record-time {
+  font-size: 14px;
+  color: #999;
+  font-weight: 600;
+}
+
+/* アクション */
+.batch-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.btn-batch {
+  width: 100%;
+  margin-top: 12px;
+  padding: 14px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-batch:hover {
+  background: #5568d3;
+  transform: translateY(-2px);
+}
+
+.btn-large {
+  padding: 18px 40px;
+  font-size: 18px;
+}
