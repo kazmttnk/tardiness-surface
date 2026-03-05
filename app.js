@@ -615,7 +615,6 @@ function closeModalAlert() {
 // バッチモード関連
 // ============================================================
 let isBatchMode = false;
-let batchSelectedReason = null;
 let batchProcessedCount = 0;
 
 // バッチモードに切り替え
@@ -626,7 +625,6 @@ function switchToBatchMode() {
   document.getElementById('normalMode').classList.add('hidden');
   document.getElementById('batchMode').classList.remove('hidden');
   
-  renderBatchReasons();
   document.getElementById('batchBarcodeInput').focus();
   
   setupBatchBarcodeInput();
@@ -635,7 +633,6 @@ function switchToBatchMode() {
 // 通常モードに戻る
 function switchToNormalMode() {
   isBatchMode = false;
-  batchSelectedReason = null;
   batchProcessedCount = 0;
   
   document.getElementById('batchMode').classList.add('hidden');
@@ -649,60 +646,22 @@ function switchToNormalMode() {
   document.getElementById('barcodeInput').focus();
 }
 
-// バッチモード用の理由レンダリング
-function renderBatchReasons() {
-  const grid = document.getElementById('batchReasonGrid');
-  grid.innerHTML = '';
-  
-  for (let i = 0; i < reasonList.length; i++) {
-    (function(reason, index) {
-      const btn = document.createElement('button');
-      btn.className = 'reason-btn';
-      btn.type = 'button';
-      btn.textContent = reason.display;
-      
-      btn.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        selectBatchReason(index);
-      });
-      
-      grid.appendChild(btn);
-    })(reasonList[i], i);
-  }
-}
-
-// バッチモードで理由を選択
-function selectBatchReason(index) {
-  if (index < 0 || index >= reasonList.length) return;
-  
-  batchSelectedReason = reasonList[index];
-  
-  // 選択状態を更新
-  const allBtns = document.querySelectorAll('#batchReasonGrid .reason-btn');
-  allBtns.forEach(btn => btn.classList.remove('selected'));
-  allBtns[index].classList.add('selected');
-  
-  // 選択された理由を表示
-  document.getElementById('selectedReasonText').textContent = batchSelectedReason.display;
-  document.getElementById('batchSelectedReason').classList.remove('hidden');
-  
-  // バーコード入力にフォーカス
-  document.getElementById('batchBarcodeInput').focus();
-}
-
 // バッチモード用のバーコード入力設定
 function setupBatchBarcodeInput() {
   const input = document.getElementById('batchBarcodeInput');
   
-  input.addEventListener('keypress', function(e) {
+  // 既存のイベントリスナーを削除するため、クローンで置き換え
+  const newInput = input.cloneNode(true);
+  input.parentNode.replaceChild(newInput, input);
+  
+  newInput.addEventListener('keypress', function(e) {
     if (e.key === 'Enter') {
       e.preventDefault();
       processBatchBarcode();
     }
   });
   
-  input.addEventListener('input', function(e) {
+  newInput.addEventListener('input', function(e) {
     let val = e.target.value.trim();
     e.target.value = val.replace(/[^0-9]/g, '');
     
@@ -716,13 +675,8 @@ function setupBatchBarcodeInput() {
   });
 }
 
-// バッチモードでバーコードを処理
+// バッチモードでバーコードを処理（遅延15分以上固定）
 async function processBatchBarcode() {
-  if (!batchSelectedReason) {
-    showAlert('error', '先に遅刻理由を選択してください');
-    return;
-  }
-  
   const val = document.getElementById('batchBarcodeInput').value.trim();
   
   if (val.length !== 6) {
@@ -745,6 +699,21 @@ async function processBatchBarcode() {
     }
   }
   
+  // 遅延（15分以上）の理由を自動設定
+  // reasonList から「遅延（15分以上）」を検索
+  let delayReason = null;
+  for (let i = 0; i < reasonList.length; i++) {
+    if (reasonList[i].display.includes('遅延') && reasonList[i].display.includes('15分以上')) {
+      delayReason = reasonList[i];
+      break;
+    }
+  }
+  
+  if (!delayReason) {
+    showAlert('error', '遅延（15分以上）の理由が見つかりません');
+    return;
+  }
+  
   // 記録データを作成
   const recordData = {
     studentId: student.studentId,
@@ -753,8 +722,8 @@ async function processBatchBarcode() {
     class: student.class,
     number: student.number,
     name: student.name,
-    reasonNumber: batchSelectedReason.number,
-    reasonText: batchSelectedReason.text,
+    reasonNumber: delayReason.number,
+    reasonText: delayReason.text,
     detail: '',
     hasPhoneCall: false,
     hasStudentCard: false
@@ -766,6 +735,9 @@ async function processBatchBarcode() {
     
     // UIに追加
     addBatchRecordToUI(recordData);
+    
+    // 本日の記録にも追加
+    addRecordToUI(recordData);
     
     // カウント更新
     batchProcessedCount++;
