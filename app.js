@@ -610,3 +610,201 @@ function closeModalAlert() {
   document.getElementById('modalOverlay').classList.remove('show');
   document.getElementById('barcodeInput').focus();
 }
+
+// ============================================================
+// バッチモード関連
+// ============================================================
+let isBatchMode = false;
+let batchSelectedReason = null;
+let batchProcessedCount = 0;
+
+// バッチモードに切り替え
+function switchToBatchMode() {
+  isBatchMode = true;
+  batchProcessedCount = 0;
+  
+  document.getElementById('normalMode').classList.add('hidden');
+  document.getElementById('batchMode').classList.remove('hidden');
+  
+  renderBatchReasons();
+  document.getElementById('batchBarcodeInput').focus();
+  
+  setupBatchBarcodeInput();
+}
+
+// 通常モードに戻る
+function switchToNormalMode() {
+  isBatchMode = false;
+  batchSelectedReason = null;
+  batchProcessedCount = 0;
+  
+  document.getElementById('batchMode').classList.add('hidden');
+  document.getElementById('normalMode').classList.remove('hidden');
+  
+  // バッチモードの入力をクリア
+  document.getElementById('batchBarcodeInput').value = '';
+  document.getElementById('batchRecordsList').innerHTML = '<div class="batch-empty">まだ処理されていません</div>';
+  document.getElementById('batchProcessedCount').textContent = '0';
+  
+  document.getElementById('barcodeInput').focus();
+}
+
+// バッチモード用の理由レンダリング
+function renderBatchReasons() {
+  const grid = document.getElementById('batchReasonGrid');
+  grid.innerHTML = '';
+  
+  for (let i = 0; i < reasonList.length; i++) {
+    (function(reason, index) {
+      const btn = document.createElement('button');
+      btn.className = 'reason-btn';
+      btn.type = 'button';
+      btn.textContent = reason.display;
+      
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        selectBatchReason(index);
+      });
+      
+      grid.appendChild(btn);
+    })(reasonList[i], i);
+  }
+}
+
+// バッチモードで理由を選択
+function selectBatchReason(index) {
+  if (index < 0 || index >= reasonList.length) return;
+  
+  batchSelectedReason = reasonList[index];
+  
+  // 選択状態を更新
+  const allBtns = document.querySelectorAll('#batchReasonGrid .reason-btn');
+  allBtns.forEach(btn => btn.classList.remove('selected'));
+  allBtns[index].classList.add('selected');
+  
+  // 選択された理由を表示
+  document.getElementById('selectedReasonText').textContent = batchSelectedReason.display;
+  document.getElementById('batchSelectedReason').classList.remove('hidden');
+  
+  // バーコード入力にフォーカス
+  document.getElementById('batchBarcodeInput').focus();
+}
+
+// バッチモード用のバーコード入力設定
+function setupBatchBarcodeInput() {
+  const input = document.getElementById('batchBarcodeInput');
+  
+  input.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      processBatchBarcode();
+    }
+  });
+  
+  input.addEventListener('input', function(e) {
+    let val = e.target.value.trim();
+    e.target.value = val.replace(/[^0-9]/g, '');
+    
+    if (e.target.value.length === 6) {
+      setTimeout(() => {
+        if (document.getElementById('batchBarcodeInput').value.length === 6) {
+          processBatchBarcode();
+        }
+      }, 100);
+    }
+  });
+}
+
+// バッチモードでバーコードを処理
+async function processBatchBarcode() {
+  if (!batchSelectedReason) {
+    showAlert('error', '先に遅刻理由を選択してください');
+    return;
+  }
+  
+  const val = document.getElementById('batchBarcodeInput').value.trim();
+  
+  if (val.length !== 6) {
+    showAlert('error', '生徒証番号は6桁で入力してください');
+    return;
+  }
+  
+  // 生徒情報を取得
+  let student = null;
+  if (studentMap && studentMap[val]) {
+    student = studentMap[val];
+  } else {
+    const result = await callAPI('getStudentInfo', { studentId: val });
+    if (result && result.success) {
+      student = result;
+    } else {
+      showAlert('error', '生徒が見つかりません');
+      document.getElementById('batchBarcodeInput').value = '';
+      return;
+    }
+  }
+  
+  // 記録データを作成
+  const recordData = {
+    studentId: student.studentId,
+    studentInfo: student.studentInfo,
+    grade: student.grade,
+    class: student.class,
+    number: student.number,
+    name: student.name,
+    reasonNumber: batchSelectedReason.number,
+    reasonText: batchSelectedReason.text,
+    detail: '',
+    hasPhoneCall: false,
+    hasStudentCard: false
+  };
+  
+  try {
+    // IndexedDB に保存
+    await saveToLocal(recordData);
+    
+    // UIに追加
+    addBatchRecordToUI(recordData);
+    
+    // カウント更新
+    batchProcessedCount++;
+    document.getElementById('batchProcessedCount').textContent = batchProcessedCount;
+    
+    // 入力欄をクリア
+    document.getElementById('batchBarcodeInput').value = '';
+    
+    // バックグラウンド同期
+    syncInBackground();
+    
+  } catch (error) {
+    showAlert('error', '保存に失敗しました: ' + error.toString());
+  }
+}
+
+// バッチモードのUIにレコードを追加
+function addBatchRecordToUI(recordData) {
+  const list = document.getElementById('batchRecordsList');
+  
+  // 空メッセージを削除
+  const empty = list.querySelector('.batch-empty');
+  if (empty) empty.remove();
+  
+  // 新しいレコードを追加
+  const item = document.createElement('div');
+  item.className = 'batch-record-item';
+  
+  const now = new Date();
+  const hh = now.getHours();
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  
+  item.innerHTML = `
+    <div class="batch-record-info">
+      <div class="batch-record-student">${recordData.studentInfo} ${recordData.name}</div>
+    </div>
+    <div class="batch-record-time">${hh}:${mm}</div>
+  `;
+  
+  // 先頭に追加
+  list.insertBefore(item, list.firstChild);
+}
