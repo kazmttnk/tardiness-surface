@@ -254,7 +254,7 @@ body {
 }
 
 .reason-btn {
-  padding: 15px;
+  padding: 22px;
   background: #f0f4ff;
   border: 2px solid #e0e0e0;
   border-radius: 8px;
@@ -265,7 +265,7 @@ body {
   color: #333;
   text-align: center;
   position: relative;
-  min-height: 80px;
+  min-height: 90px;
   display: flex;
   align-items: center;
   justify-content: center;
