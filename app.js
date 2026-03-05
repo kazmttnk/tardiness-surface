@@ -197,8 +197,8 @@ function setupKeyboardShortcuts() {
       return;
     }
     
-    // 生徒情報が表示されている場合のみ
-    if (!document.getElementById('studentInfo').classList.contains('show')) {
+    // 生徒情報が表示されている場合のみショートカット有効
+    if (!currentStudent) {
       return;
     }
     
@@ -500,7 +500,9 @@ function resetForm() {
   selectedReason = null;
   
   document.getElementById('barcodeInput').value = '';
-  document.getElementById('studentInfo').classList.remove('show');
+  
+  // 生徒情報表示をクリア
+  document.getElementById('studentDisplay').textContent = '－';
   
   const reasonBtns = document.querySelectorAll('.reason-btn');
   for (let i = 0; i < reasonBtns.length; i++) {
