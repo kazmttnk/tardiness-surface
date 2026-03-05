@@ -10,30 +10,23 @@
 </head>
 <body>
   <div class="container">
-    <!-- ヘッダー -->
-    <div class="header">
-      <h1>朝の遅刻者記録システム</h1>
-      <div class="header-right">
-        <div class="gate-time">門限時刻:<span id="gateTime">8:20</span></div>
-        <div class="status-bar">
-          <span id="syncStatus" class="sync-status">同期済み</span>
-          <span id="pendingCount" class="pending-count hidden">未送信: 0件</span>
-        </div>
-      </div>
-    </div>
-
-    <div id="alertBox" class="hidden"></div>
-
     <!-- メインエリア（2カラム） -->
     <div class="main-area">
-      <!-- 左カラム：生徒情報 -->
+      <!-- 左カラム -->
       <div class="left-column">
+        <!-- ヘッダー情報 -->
+        <div class="title-section">
+          <h1>朝の遅刻者記録システム</h1>
+          <div class="header-info">
+            <div class="gate-time">門限時刻: <span id="gateTime">08:20</span></div>
+            <span id="syncStatus" class="sync-status">同期済み</span>
+            <span id="pendingCount" class="pending-count hidden">未送信: 0件</span>
+          </div>
+        </div>
+
         <!-- バーコード入力 -->
         <div class="input-section">
-          <label class="input-label">
-            生徒証番号を入力してください
-            <span class="hint">（バーコードをスキャン）</span>
-          </label>
+          <label class="section-label">生徒証番号入力欄</label>
           <input 
             type="text" 
             id="barcodeInput" 
@@ -46,36 +39,31 @@
             tabindex="1">
         </div>
 
-        <!-- 生徒情報表示 -->
-        <div id="studentInfo" class="student-info-section">
-          <div class="info-row">
-            <span class="info-label">生徒証番号</span>
-            <span class="info-value" id="displayStudentId">-</span>
+        <!-- 生徒情報表示（1行のみ） -->
+        <div class="student-section">
+          <label class="section-label">生徒情報</label>
+          <div id="studentDisplay" class="student-display">－</div>
+        </div>
+
+        <!-- 本日の記録 -->
+        <div class="records-section">
+          <div class="section-header">
+            <span class="section-label">本日の遅刻者一覧</span>
+            <span class="record-count" id="recordCount">0件</span>
           </div>
-          <div class="info-row">
-            <span class="info-label">氏名</span>
-            <span class="info-value" id="displayName">-</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">クラス</span>
-            <span class="info-value" id="displayClass">-</span>
+          <div id="recordsList" class="records-list">
+            <div class="loading"><div class="spinner"></div>読み込み中...</div>
           </div>
         </div>
       </div>
 
-      <!-- 右カラム：理由選択＋記録 -->
+      <!-- 右カラム：理由選択の大きなボックス -->
       <div class="right-column">
-        <!-- 理由選択カード -->
-        <div class="reason-card">
-          <label class="input-label">
-            遅刻理由を選択してください
-            <span class="hint">（数字キー 1〜9 または タッチ）</span>
-          </label>
+        <div class="reason-big-box">
+          <label class="section-label">遅刻理由入力欄・保存欄</label>
           
           <div class="reason-content">
-            <div class="reason-grid-wrapper">
-              <div id="reasonGrid" class="reason-grid"></div>
-            </div>
+            <div id="reasonGrid" class="reason-grid"></div>
             
             <textarea 
               id="detailInput" 
@@ -83,7 +71,6 @@
               placeholder="詳細（任意）"
               tabindex="10"></textarea>
 
-            <!-- チェックボックス -->
             <div class="checkbox-group">
               <label class="checkbox-label">
                 <input type="checkbox" id="hasPhoneCall" tabindex="11">
@@ -95,7 +82,6 @@
               </label>
             </div>
 
-            <!-- アクションボタン -->
             <div class="action-buttons">
               <button type="button" class="btn btn-secondary" id="cancelBtn" tabindex="14">
                 キャンセル<span class="shortcut">Esc</span>
@@ -106,19 +92,10 @@
             </div>
           </div>
         </div>
-
-        <!-- 本日の記録 -->
-        <div class="records-card">
-          <div class="records-header">
-            <span>本日の記録</span>
-            <span class="record-count" id="recordCount">0件</span>
-          </div>
-          <div id="recordsList" class="records-list">
-            <div class="loading"><div class="spinner"></div>読み込み中...</div>
-          </div>
-        </div>
       </div>
     </div>
+
+    <div id="alertBox" class="hidden"></div>
   </div>
 
   <!-- モーダルアラート -->
