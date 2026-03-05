@@ -511,15 +511,16 @@ body {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 20px;
   z-index: 2000;
+  overflow-y: auto;
 }
 
 .batch-container {
   max-width: 1000px;
   margin: 0 auto;
-  height: 100%;
   display: flex;
   flex-direction: column;
   gap: 20px;
+  padding-bottom: 40px;
 }
 
 .batch-header {
@@ -550,39 +551,44 @@ body {
   margin-bottom: 12px;
 }
 
-/* 理由選択 */
+/* 固定理由表示 + アクション */
 .batch-reason-section {
   background: white;
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
 }
 
-.batch-reason-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  margin-bottom: 16px;
+.batch-fixed-reason {
+  flex: 1;
 }
 
-.batch-selected-reason {
-  margin-top: 16px;
-  padding: 16px;
-  background: #667eea;
-  border-radius: 8px;
-  text-align: center;
-}
-
-.selected-reason-label {
+.fixed-reason-label {
   font-size: 14px;
-  color: rgba(255,255,255,0.9);
+  color: #666;
   margin-bottom: 4px;
+  font-weight: 600;
 }
 
-.selected-reason-text {
+.fixed-reason-text {
   font-size: 24px;
   font-weight: 700;
-  color: white;
+  color: #667eea;
+}
+
+.batch-top-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-action {
+  padding: 14px 28px;
+  font-size: 16px;
+  white-space: nowrap;
 }
 
 /* バーコード入力 */
@@ -630,8 +636,7 @@ body {
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  flex: 1;
-  min-height: 0;
+  max-height: 500px;
   display: flex;
   flex-direction: column;
 }
@@ -680,12 +685,6 @@ body {
   font-weight: 600;
 }
 
-/* アクション */
-.batch-actions {
-  display: flex;
-  justify-content: center;
-}
-
 .btn-batch {
   width: 100%;
   margin-top: 12px;
@@ -703,9 +702,4 @@ body {
 .btn-batch:hover {
   background: #5568d3;
   transform: translateY(-2px);
-}
-
-.btn-large {
-  padding: 18px 40px;
-  font-size: 18px;
 }
