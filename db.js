@@ -48,29 +48,37 @@ async function initDB() {
 // レコードをローカル保存
 // ============================================================
 async function saveToLocal(recordData) {
-  if (!db) await initDB();
+  // データベースが閉じられていたら再初期化
+  if (!db || db.objectStoreNames.length === 0) {
+    await initDB();
+  }
   
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], 'readwrite');
-    const objectStore = transaction.objectStore(STORE_NAME);
-    
-    const record = {
-      ...recordData,
-      timestamp: new Date().toISOString(),
-      synced: 0  // 0 = 未同期
-    };
-    
-    const request = objectStore.add(record);
-    
-    request.onsuccess = () => {
-      console.log('Record saved locally:', request.result);
-      resolve(request.result);
-    };
-    
-    request.onerror = () => {
-      console.error('Local save error:', request.error);
-      reject(request.error);
-    };
+    try {
+      const transaction = db.transaction([STORE_NAME], 'readwrite');
+      const objectStore = transaction.objectStore(STORE_NAME);
+      
+      const record = {
+        ...recordData,
+        timestamp: new Date().toISOString(),
+        synced: 0  // 0 = 未同期
+      };
+      
+      const request = objectStore.add(record);
+      
+      request.onsuccess = () => {
+        console.log('Record saved locally:', request.result);
+        resolve(request.result);
+      };
+      
+      request.onerror = () => {
+        console.error('Local save error:', request.error);
+        reject(request.error);
+      };
+    } catch (error) {
+      console.error('Transaction error:', error);
+      reject(error);
+    }
   });
 }
 
@@ -78,25 +86,33 @@ async function saveToLocal(recordData) {
 // 未送信レコードを取得
 // ============================================================
 async function getPendingRecords() {
-  if (!db) await initDB();
+  // データベースが閉じられていたら再初期化
+  if (!db || db.objectStoreNames.length === 0) {
+    await initDB();
+  }
   
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], 'readonly');
-    const objectStore = transaction.objectStore(STORE_NAME);
-    const index = objectStore.index('synced');
-    
-    // synced = 0 のレコードのみ取得
-    const request = index.getAll(0);
-    
-    request.onsuccess = () => {
-      console.log('Pending records:', request.result.length);
-      resolve(request.result);
-    };
-    
-    request.onerror = () => {
-      console.error('Get pending error:', request.error);
-      reject(request.error);
-    };
+    try {
+      const transaction = db.transaction([STORE_NAME], 'readonly');
+      const objectStore = transaction.objectStore(STORE_NAME);
+      const index = objectStore.index('synced');
+      
+      // synced = 0 のレコードのみ取得
+      const request = index.getAll(0);
+      
+      request.onsuccess = () => {
+        console.log('Pending records:', request.result.length);
+        resolve(request.result);
+      };
+      
+      request.onerror = () => {
+        console.error('Get pending error:', request.error);
+        reject(request.error);
+      };
+    } catch (error) {
+      console.error('Transaction error:', error);
+      reject(error);
+    }
   });
 }
 
@@ -104,36 +120,44 @@ async function getPendingRecords() {
 // レコードを同期済みにマーク
 // ============================================================
 async function markAsSynced(id) {
-  if (!db) await initDB();
+  // データベースが閉じられていたら再初期化
+  if (!db || db.objectStoreNames.length === 0) {
+    await initDB();
+  }
   
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], 'readwrite');
-    const objectStore = transaction.objectStore(STORE_NAME);
-    
-    const request = objectStore.get(id);
-    
-    request.onsuccess = () => {
-      const record = request.result;
-      if (record) {
-        record.synced = 1;  // 1 = 同期済み
-        const updateRequest = objectStore.put(record);
-        
-        updateRequest.onsuccess = () => {
-          console.log('Record marked as synced:', id);
+    try {
+      const transaction = db.transaction([STORE_NAME], 'readwrite');
+      const objectStore = transaction.objectStore(STORE_NAME);
+      
+      const request = objectStore.get(id);
+      
+      request.onsuccess = () => {
+        const record = request.result;
+        if (record) {
+          record.synced = 1;  // 1 = 同期済み
+          const updateRequest = objectStore.put(record);
+          
+          updateRequest.onsuccess = () => {
+            console.log('Record marked as synced:', id);
+            resolve();
+          };
+          
+          updateRequest.onerror = () => {
+            reject(updateRequest.error);
+          };
+        } else {
           resolve();
-        };
-        
-        updateRequest.onerror = () => {
-          reject(updateRequest.error);
-        };
-      } else {
-        resolve();
-      }
-    };
-    
-    request.onerror = () => {
-      reject(request.error);
-    };
+        }
+      };
+      
+      request.onerror = () => {
+        reject(request.error);
+      };
+    } catch (error) {
+      console.error('Transaction error:', error);
+      reject(error);
+    }
   });
 }
 
