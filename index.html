@@ -102,21 +102,24 @@
       <div class="batch-container">
         <!-- ヘッダー -->
         <div class="batch-header">
-          <h1>📦 バッチ処理モード</h1>
+          <h1>🚃 遅延バッチ処理モード</h1>
           <div class="batch-info">
             <span id="batchSyncStatus" class="sync-status">同期済み</span>
             <span id="batchPendingCount" class="pending-count hidden">未送信: 0件</span>
           </div>
         </div>
 
-        <!-- 理由選択 -->
+        <!-- 固定理由表示 + アクションボタン -->
         <div class="batch-reason-section">
-          <label class="batch-label">遅刻理由を選択してください</label>
-          <div id="batchReasonGrid" class="batch-reason-grid"></div>
+          <div class="batch-fixed-reason">
+            <div class="fixed-reason-label">遅刻理由（自動設定）</div>
+            <div class="fixed-reason-text">遅延（15分以上）</div>
+          </div>
           
-          <div class="batch-selected-reason hidden" id="batchSelectedReason">
-            <div class="selected-reason-label">選択中の理由:</div>
-            <div class="selected-reason-text" id="selectedReasonText">未選択</div>
+          <div class="batch-top-actions">
+            <button type="button" class="btn btn-secondary btn-action" onclick="switchToNormalMode()">
+              ← 通常モードに戻る
+            </button>
           </div>
         </div>
 
@@ -140,13 +143,6 @@
           <div id="batchRecordsList" class="batch-records-list">
             <div class="batch-empty">まだ処理されていません</div>
           </div>
-        </div>
-
-        <!-- 戻るボタン -->
-        <div class="batch-actions">
-          <button type="button" class="btn btn-large btn-secondary" onclick="switchToNormalMode()">
-            ← 通常モードに戻る
-          </button>
         </div>
       </div>
     </div>
