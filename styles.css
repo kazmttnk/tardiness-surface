@@ -249,7 +249,8 @@ body {
   display: grid; 
   grid-template-columns: repeat(3, 1fr); 
   gap: 12px;
-  flex: 1;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .reason-btn {
