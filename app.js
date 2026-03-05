@@ -504,10 +504,12 @@ function resetForm() {
   // 生徒情報表示をクリア
   document.getElementById('studentDisplay').textContent = '－';
   
+  // 理由ボタンの選択状態を確実にクリア
   const reasonBtns = document.querySelectorAll('.reason-btn');
-  for (let i = 0; i < reasonBtns.length; i++) {
-    reasonBtns[i].classList.remove('selected');
-  }
+  reasonBtns.forEach(btn => {
+    btn.classList.remove('selected');
+    btn.blur(); // フォーカスも解除
+  });
   
   const detailInput = document.getElementById('detailInput');
   detailInput.value = '';
