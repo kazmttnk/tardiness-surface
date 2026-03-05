@@ -266,16 +266,8 @@ async function searchStudent() {
 // 生徒情報表示
 // ============================================================
 function displayStudent(student) {
-  document.getElementById('displayStudentId').textContent = student.studentId;
-  document.getElementById('displayName').textContent = student.name;
-  document.getElementById('displayClass').textContent = student.studentInfo;
-  document.getElementById('studentInfo').classList.add('show');
-  
-  // 最初の理由にフォーカス（タブキーで操作可能）
-  const firstReason = document.querySelector('.reason-btn');
-  if (firstReason) {
-    firstReason.focus();
-  }
+  // クラス情報のみを表示
+  document.getElementById('studentDisplay').textContent = student.studentInfo;
 }
 
 // ============================================================
