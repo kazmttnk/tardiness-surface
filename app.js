@@ -400,10 +400,13 @@ async function saveRecord() {
     showAlert('success', '✓ 記録を保存しました');
     flashInput('success');
     
-    // 4. フォームリセット
+    // 4. レシート印刷
+    await printReceipt(recordData);
+    
+    // 5. フォームリセット
     resetForm();
     
-    // 5. バックグラウンドで同期（非同期）
+    // 6. バックグラウンドで同期（非同期）
     syncInBackground();
     
   } catch (error) {
@@ -733,6 +736,9 @@ async function processBatchBarcode() {
     // IndexedDB に保存
     await saveToLocal(recordData);
     
+    // レシート印刷
+    await printReceipt(recordData);
+    
     // UIに追加
     addBatchRecordToUI(recordData);
     
@@ -779,4 +785,151 @@ function addBatchRecordToUI(recordData) {
   
   // 先頭に追加
   list.insertBefore(item, list.firstChild);
+}
+
+/* ========================================
+   プリンター接続・印刷処理
+======================================== */
+let printerPort = null;
+let printerWriter = null;
+
+// プリンター接続
+async function connectPrinter() {
+  try {
+    // Web Serial API対応チェック
+    if (!('serial' in navigator)) {
+      alert('お使いのブラウザはWeb Serial APIに対応していません。\nChrome/Edge最新版をご利用ください。');
+      return;
+    }
+
+    // プリンター選択
+    printerPort = await navigator.serial.requestPort();
+    await printerPort.open({ baudRate: 38400 }); // TM-T20II デフォルト速度
+
+    // Writer取得
+    const textEncoder = new TextEncoderStream();
+    const writableStreamClosed = textEncoder.readable.pipeTo(printerPort.writable);
+    printerWriter = textEncoder.writable.getWriter();
+
+    // 接続成功
+    updatePrinterStatus(true);
+    console.log('プリンター接続成功');
+
+  } catch (err) {
+    console.error('プリンター接続エラー:', err);
+    alert('プリンター接続に失敗しました: ' + err.message);
+    updatePrinterStatus(false);
+  }
+}
+
+// プリンター状態表示更新
+function updatePrinterStatus(connected) {
+  const statusEl = document.getElementById('printerStatus');
+  const btnEl = document.getElementById('connectPrinterBtn');
+  
+  if (connected) {
+    statusEl.textContent = '接続済み';
+    statusEl.className = 'printer-status-text connected';
+    btnEl.textContent = '🖨️ 接続済み';
+    btnEl.disabled = true;
+  } else {
+    statusEl.textContent = '未接続';
+    statusEl.className = 'printer-status-text';
+    btnEl.textContent = '🖨️ プリンター接続';
+    btnEl.disabled = false;
+  }
+}
+
+// ESC/POSコマンド送信
+async function sendESCPOS(commands) {
+  if (!printerWriter) {
+    console.warn('プリンター未接続のため印刷スキップ');
+    return false;
+  }
+
+  try {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(commands);
+    await printerWriter.write(data);
+    return true;
+  } catch (err) {
+    console.error('印刷エラー:', err);
+    updatePrinterStatus(false);
+    return false;
+  }
+}
+
+// レシート印刷
+async function printReceipt(record) {
+  if (!printerWriter) {
+    console.log('プリンター未接続のため印刷スキップ');
+    return;
+  }
+
+  // ESC/POSコマンド生成
+  const ESC = '\x1B';
+  const GS = '\x1D';
+  
+  let receipt = '';
+  
+  // 初期化
+  receipt += ESC + '@';
+  
+  // 文字サイズ標準
+  receipt += ESC + '!' + '\x00';
+  
+  // センター揃え
+  receipt += ESC + 'a' + '\x01';
+  
+  // タイトル（2倍角）
+  receipt += ESC + '!' + '\x30'; // 縦横2倍
+  receipt += '遅刻記録レシート\n';
+  receipt += ESC + '!' + '\x00'; // 標準に戻す
+  
+  // 罫線
+  receipt += '================================\n';
+  
+  // 左揃え
+  receipt += ESC + 'a' + '\x00';
+  
+  // 登録時間
+  const timestamp = new Date(record.timestamp);
+  const dateStr = `${timestamp.getFullYear()}/${String(timestamp.getMonth()+1).padStart(2,'0')}/${String(timestamp.getDate()).padStart(2,'0')}`;
+  const timeStr = `${String(timestamp.getHours()).padStart(2,'0')}:${String(timestamp.getMinutes()).padStart(2,'0')}`;
+  receipt += `登録時間: ${dateStr} ${timeStr}\n`;
+  receipt += '--------------------------------\n';
+  
+  // 生徒情報
+  receipt += `生徒情報: ${record.studentInfo}\n`;
+  receipt += '--------------------------------\n';
+  
+  // 遅刻理由
+  receipt += `遅刻理由: ${record.reasonText}\n`;
+  receipt += '--------------------------------\n';
+  
+  // 備考
+  if (record.detail && record.detail.trim()) {
+    receipt += `備考: ${record.detail}\n`;
+    receipt += '--------------------------------\n';
+  }
+  
+  // 電話連絡・生徒証
+  receipt += `電話連絡: ${record.hasPhoneCall ? 'あり' : 'なし'}\n`;
+  receipt += `生徒証  : ${record.hasStudentCard ? 'あり' : 'なし'}\n`;
+  
+  // 罫線
+  receipt += '================================\n';
+  
+  // 改行
+  receipt += '\n\n';
+  
+  // カット
+  receipt += GS + 'V' + '\x41' + '\x03'; // パーシャルカット
+  
+  // 送信
+  const success = await sendESCPOS(receipt);
+  
+  if (success) {
+    console.log('レシート印刷完了');
+  }
 }
