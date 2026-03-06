@@ -22,6 +22,12 @@
             <span id="syncStatus" class="sync-status">同期済み</span>
             <span id="pendingCount" class="pending-count hidden">未送信: 0件</span>
           </div>
+          <div class="printer-status">
+            <button type="button" class="btn-printer" id="connectPrinterBtn" onclick="connectPrinter()">
+              🖨️ プリンター接続
+            </button>
+            <span id="printerStatus" class="printer-status-text">未接続</span>
+          </div>
         </div>
 
         <!-- 生徒証番号入力 + 生徒情報（統合） -->
