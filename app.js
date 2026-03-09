@@ -790,24 +790,14 @@ function addBatchRecordToUI(recordData) {
 /* ========================================
    QZ Tray プリンター接続・印刷処理
 ======================================== */
-let qz = null;
 let printerConnected = false;
 let selectedPrinter = null;
-
-// QZ Trayライブラリ読み込み確認
-function checkQZTray() {
-  if (typeof qz === 'undefined') {
-    console.error('QZ Tray library not loaded');
-    return false;
-  }
-  return true;
-}
 
 // プリンター接続
 async function connectPrinter() {
   try {
     // QZ Trayライブラリチェック
-    if (!window.qz || !window.qz.websocket) {
+    if (typeof qz === 'undefined' || !qz.websocket) {
       alert('QZ Trayがインストールされていません。\n\nhttps://qz.io/download/ からダウンロードしてインストールしてください。');
       window.open('https://qz.io/download/', '_blank');
       return;
