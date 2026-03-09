@@ -1026,3 +1026,4 @@ async function printReceipt(record) {
     alert('印刷に失敗しました:\n' + err.message);
   }
 }
+

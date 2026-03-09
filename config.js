@@ -1,6 +1,6 @@
 // Apps Script のデプロイURL
 // TODO: 実際のデプロイURLに置き換えてください
-const API_URL = 'https://script.google.com/macros/s/AKfycbwCJAZiNNbfuVQ4Obr7uq1tidytgxAhaE1dlpXsDJOx1uzV6xVMI36wjn6xGHV_3GMpyA/exec';
+const API_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID_HERE/exec';
 
 // 認証トークン
 const API_TOKEN = 'tardiness-auth-2025-x8k9mP2qR7nL';
