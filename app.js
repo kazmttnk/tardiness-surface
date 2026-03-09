@@ -788,148 +788,251 @@ function addBatchRecordToUI(recordData) {
 }
 
 /* ========================================
-   プリンター接続・印刷処理
+   QZ Tray プリンター接続・印刷処理
 ======================================== */
-let printerPort = null;
-let printerWriter = null;
+let qz = null;
+let printerConnected = false;
+let selectedPrinter = null;
+
+// QZ Trayライブラリ読み込み確認
+function checkQZTray() {
+  if (typeof qz === 'undefined') {
+    console.error('QZ Tray library not loaded');
+    return false;
+  }
+  return true;
+}
 
 // プリンター接続
 async function connectPrinter() {
   try {
-    // Web Serial API対応チェック
-    if (!('serial' in navigator)) {
-      alert('お使いのブラウザはWeb Serial APIに対応していません。\nChrome/Edge最新版をご利用ください。');
+    // QZ Trayライブラリチェック
+    if (!window.qz || !window.qz.websocket) {
+      alert('QZ Trayがインストールされていません。\n\nhttps://qz.io/download/ からダウンロードしてインストールしてください。');
+      window.open('https://qz.io/download/', '_blank');
       return;
     }
 
-    // プリンター選択
-    printerPort = await navigator.serial.requestPort();
-    await printerPort.open({ baudRate: 38400 }); // TM-T20II デフォルト速度
+    // QZ Trayに接続
+    if (!qz.websocket.isActive()) {
+      await qz.websocket.connect();
+    }
 
-    // Writer取得
-    const textEncoder = new TextEncoderStream();
-    const writableStreamClosed = textEncoder.readable.pipeTo(printerPort.writable);
-    printerWriter = textEncoder.writable.getWriter();
+    // プリンター一覧を取得
+    const printers = await qz.printers.find();
+    
+    if (printers.length === 0) {
+      alert('プリンターが見つかりません。\nプリンターを接続してください。');
+      return;
+    }
 
-    // 接続成功
-    updatePrinterStatus(true);
-    console.log('プリンター接続成功');
+    // TM-T20IIを検索
+    let tmPrinter = printers.find(p => 
+      p.toLowerCase().includes('tm-t20') || 
+      p.toLowerCase().includes('tmt20') ||
+      p.toLowerCase().includes('epson') && p.toLowerCase().includes('t20')
+    );
+
+    // 見つからない場合は最初のプリンターを使用（またはユーザーに選択させる）
+    if (!tmPrinter) {
+      // プリンター選択ダイアログを表示
+      const choice = await showPrinterSelectionDialog(printers);
+      if (!choice) return;
+      tmPrinter = choice;
+    }
+
+    selectedPrinter = tmPrinter;
+    printerConnected = true;
+    updatePrinterStatus(true, tmPrinter);
+    console.log('プリンター接続成功:', tmPrinter);
 
   } catch (err) {
     console.error('プリンター接続エラー:', err);
-    alert('プリンター接続に失敗しました: ' + err.message);
+    if (err.message && err.message.includes('Unable to establish connection')) {
+      alert('QZ Trayが起動していません。\n\nタスクトレイのQZアイコンを確認してください。\n起動していない場合はスタートメニューから起動してください。');
+    } else {
+      alert('プリンター接続に失敗しました:\n' + err.message);
+    }
     updatePrinterStatus(false);
   }
 }
 
+// プリンター選択ダイアログ
+async function showPrinterSelectionDialog(printers) {
+  return new Promise((resolve) => {
+    const dialog = document.createElement('div');
+    dialog.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      z-index: 10000;
+      max-width: 500px;
+      width: 90%;
+    `;
+
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 9999;
+    `;
+
+    dialog.innerHTML = `
+      <h2 style="margin: 0 0 20px 0; font-size: 18px;">プリンターを選択</h2>
+      <div id="printerList" style="max-height: 300px; overflow-y: auto;">
+        ${printers.map((p, i) => `
+          <div style="padding: 12px; margin: 8px 0; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.2s;"
+               onmouseover="this.style.borderColor='#2196F3'; this.style.background='#E3F2FD';"
+               onmouseout="this.style.borderColor='#ddd'; this.style.background='white';"
+               onclick="window.selectPrinter('${p.replace(/'/g, "\\'")}')">
+            🖨️ ${p}
+          </div>
+        `).join('')}
+      </div>
+      <button onclick="window.cancelPrinterSelection()" 
+              style="margin-top: 20px; padding: 10px 20px; background: #ccc; border: none; border-radius: 6px; cursor: pointer;">
+        キャンセル
+      </button>
+    `;
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(dialog);
+
+    window.selectPrinter = (printer) => {
+      document.body.removeChild(dialog);
+      document.body.removeChild(overlay);
+      delete window.selectPrinter;
+      delete window.cancelPrinterSelection;
+      resolve(printer);
+    };
+
+    window.cancelPrinterSelection = () => {
+      document.body.removeChild(dialog);
+      document.body.removeChild(overlay);
+      delete window.selectPrinter;
+      delete window.cancelPrinterSelection;
+      resolve(null);
+    };
+  });
+}
+
 // プリンター状態表示更新
-function updatePrinterStatus(connected) {
+function updatePrinterStatus(connected, printerName = '') {
   const statusEl = document.getElementById('printerStatus');
   const btnEl = document.getElementById('connectPrinterBtn');
   
   if (connected) {
-    statusEl.textContent = '接続済み';
+    statusEl.textContent = printerName ? `接続: ${printerName}` : '接続済み';
     statusEl.className = 'printer-status-text connected';
+    statusEl.title = printerName;
     btnEl.textContent = '🖨️ 接続済み';
     btnEl.disabled = true;
   } else {
     statusEl.textContent = '未接続';
     statusEl.className = 'printer-status-text';
+    statusEl.title = '';
     btnEl.textContent = '🖨️ プリンター接続';
     btnEl.disabled = false;
   }
 }
 
-// ESC/POSコマンド送信
-async function sendESCPOS(commands) {
-  if (!printerWriter) {
-    console.warn('プリンター未接続のため印刷スキップ');
-    return false;
-  }
-
-  try {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(commands);
-    await printerWriter.write(data);
-    return true;
-  } catch (err) {
-    console.error('印刷エラー:', err);
-    updatePrinterStatus(false);
-    return false;
-  }
-}
-
 // レシート印刷
 async function printReceipt(record) {
-  if (!printerWriter) {
+  if (!printerConnected || !selectedPrinter) {
     console.log('プリンター未接続のため印刷スキップ');
     return;
   }
 
-  // ESC/POSコマンド生成
-  const ESC = '\x1B';
-  const GS = '\x1D';
-  
-  let receipt = '';
-  
-  // 初期化
-  receipt += ESC + '@';
-  
-  // 文字サイズ標準
-  receipt += ESC + '!' + '\x00';
-  
-  // センター揃え
-  receipt += ESC + 'a' + '\x01';
-  
-  // タイトル（2倍角）
-  receipt += ESC + '!' + '\x30'; // 縦横2倍
-  receipt += '遅刻記録レシート\n';
-  receipt += ESC + '!' + '\x00'; // 標準に戻す
-  
-  // 罫線
-  receipt += '================================\n';
-  
-  // 左揃え
-  receipt += ESC + 'a' + '\x00';
-  
-  // 登録時間
-  const timestamp = new Date(record.timestamp);
-  const dateStr = `${timestamp.getFullYear()}/${String(timestamp.getMonth()+1).padStart(2,'0')}/${String(timestamp.getDate()).padStart(2,'0')}`;
-  const timeStr = `${String(timestamp.getHours()).padStart(2,'0')}:${String(timestamp.getMinutes()).padStart(2,'0')}`;
-  receipt += `登録時間: ${dateStr} ${timeStr}\n`;
-  receipt += '--------------------------------\n';
-  
-  // 生徒情報
-  receipt += `生徒情報: ${record.studentInfo}\n`;
-  receipt += '--------------------------------\n';
-  
-  // 遅刻理由
-  receipt += `遅刻理由: ${record.reasonText}\n`;
-  receipt += '--------------------------------\n';
-  
-  // 備考
-  if (record.detail && record.detail.trim()) {
-    receipt += `備考: ${record.detail}\n`;
+  try {
+    // ESC/POSコマンド生成
+    const ESC = '\x1B';
+    const GS = '\x1D';
+    
+    let receipt = '';
+    
+    // 初期化
+    receipt += ESC + '@';
+    
+    // 文字サイズ標準
+    receipt += ESC + '!' + '\x00';
+    
+    // センター揃え
+    receipt += ESC + 'a' + '\x01';
+    
+    // タイトル（2倍角）
+    receipt += ESC + '!' + '\x30'; // 縦横2倍
+    receipt += '遅刻記録レシート\n';
+    receipt += ESC + '!' + '\x00'; // 標準に戻す
+    
+    // 罫線
+    receipt += '================================\n';
+    
+    // 左揃え
+    receipt += ESC + 'a' + '\x00';
+    
+    // 登録時間
+    const timestamp = new Date(record.timestamp);
+    const dateStr = `${timestamp.getFullYear()}/${String(timestamp.getMonth()+1).padStart(2,'0')}/${String(timestamp.getDate()).padStart(2,'0')}`;
+    const timeStr = `${String(timestamp.getHours()).padStart(2,'0')}:${String(timestamp.getMinutes()).padStart(2,'0')}`;
+    receipt += `登録時間: ${dateStr} ${timeStr}\n`;
     receipt += '--------------------------------\n';
-  }
-  
-  // 電話連絡・生徒証
-  receipt += `電話連絡: ${record.hasPhoneCall ? 'あり' : 'なし'}\n`;
-  receipt += `生徒証  : ${record.hasStudentCard ? 'あり' : 'なし'}\n`;
-  
-  // 罫線
-  receipt += '================================\n';
-  
-  // 改行
-  receipt += '\n\n';
-  
-  // カット
-  receipt += GS + 'V' + '\x41' + '\x03'; // パーシャルカット
-  
-  // 送信
-  const success = await sendESCPOS(receipt);
-  
-  if (success) {
+    
+    // 生徒情報
+    receipt += `生徒情報: ${record.studentInfo}\n`;
+    receipt += '--------------------------------\n';
+    
+    // 遅刻理由
+    receipt += `遅刻理由: ${record.reasonText}\n`;
+    receipt += '--------------------------------\n';
+    
+    // 備考
+    if (record.detail && record.detail.trim()) {
+      receipt += `備考: ${record.detail}\n`;
+      receipt += '--------------------------------\n';
+    }
+    
+    // 電話連絡・生徒証
+    receipt += `電話連絡: ${record.hasPhoneCall ? 'あり' : 'なし'}\n`;
+    receipt += `生徒証  : ${record.hasStudentCard ? 'あり' : 'なし'}\n`;
+    
+    // 罫線
+    receipt += '================================\n';
+    
+    // 改行
+    receipt += '\n\n';
+    
+    // カット
+    receipt += GS + 'V' + '\x41' + '\x03'; // パーシャルカット
+    
+    // QZ Tray設定
+    const config = qz.configs.create(selectedPrinter, {
+      encoding: 'UTF-8',
+      scaleContent: false
+    });
+
+    // 印刷データ作成
+    const data = [{
+      type: 'raw',
+      format: 'plain',
+      data: receipt
+    }];
+
+    // 印刷実行
+    await qz.print(config, data);
+    
     console.log('レシート印刷完了');
+
+  } catch (err) {
+    console.error('印刷エラー:', err);
+    alert('印刷に失敗しました:\n' + err.message);
   }
 }
