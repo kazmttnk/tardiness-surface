@@ -842,19 +842,27 @@ function updatePrinterStatus(connected) {
 
 // ESC/POSコマンド送信
 async function sendESCPOS(commands) {
-  if (!printerWriter) {
-    console.warn('プリンター未接続のため印刷スキップ');
-    return false;
-  }
-
   try {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(commands);
-    await printerWriter.write(data);
+    const bytes = new Uint8Array(commands.length);
+    for (let i = 0; i < commands.length; i++) {
+      bytes[i] = commands.charCodeAt(i) & 0xFF;
+    }
+    const base64 = btoa(String.fromCharCode(...bytes));
+
+    const res = await fetch('http://localhost:3000/print', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: base64 })
+    });
+
+    const result = await res.json();
+    if (!result.ok) {
+      console.error('印刷サーバーエラー:', result.error);
+      return false;
+    }
     return true;
   } catch (err) {
-    console.error('印刷エラー:', err);
-    updatePrinterStatus(false);
+    console.error('印刷エラー（サーバー未起動?）:', err);
     return false;
   }
 }
