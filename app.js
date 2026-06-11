@@ -869,10 +869,8 @@ async function sendESCPOS(commands) {
 
 // レシート印刷
 async function printReceipt(record) {
-  if (!printerWriter) {
-    console.log('プリンター未接続のため印刷スキップ');
-    return;
-  }
+  // ESC/POSコマンド生成
+  const ESC = '\x1B';
 
   // ESC/POSコマンド生成
   const ESC = '\x1B';
