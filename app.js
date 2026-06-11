@@ -793,16 +793,13 @@ function addBatchRecordToUI(recordData) {
 // ESC/POSコマンドをローカルサーバー経由で送信
 async function sendESCPOS(commands) {
   try {
-    const bytes = new Uint8Array(commands.length);
-    for (let i = 0; i < commands.length; i++) {
-      bytes[i] = commands.charCodeAt(i) & 0xFF;
-    }
-    const base64 = btoa(String.fromCharCode(...bytes));
+    // 文字列をそのままUTF-8のBase64で送る（Shift-JIS変換はサーバー側）
+    const encoded = encodeURIComponent(commands);
 
     const res = await fetch('http://localhost:3000/print', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: base64 })
+      body: JSON.stringify({ text: commands })
     });
 
     const result = await res.json();
