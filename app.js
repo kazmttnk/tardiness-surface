@@ -703,7 +703,6 @@ async function processBatchBarcode() {
   }
   
   // 遅延（15分以上）の理由を自動設定
-  // reasonList から「遅延（15分以上）」を検索
   let delayReason = null;
   for (let i = 0; i < reasonList.length; i++) {
     if (reasonList[i].display.includes('遅延') && reasonList[i].display.includes('15分以上')) {
@@ -788,59 +787,10 @@ function addBatchRecordToUI(recordData) {
 }
 
 /* ========================================
-   Web Serial API プリンター接続・印刷処理
+   印刷処理（ローカルサーバー経由）
 ======================================== */
-let printerPort = null;
-let printerWriter = null;
 
-// プリンター接続
-async function connectPrinter() {
-  try {
-    // Web Serial API対応チェック
-    if (!('serial' in navigator)) {
-      alert('お使いのブラウザはWeb Serial APIに対応していません。\nChrome/Edge最新版をご利用ください。');
-      return;
-    }
-
-    // プリンター選択
-    printerPort = await navigator.serial.requestPort();
-    await printerPort.open({ baudRate: 38400 }); // TM-T20II デフォルト速度
-
-    // Writer取得
-    const textEncoder = new TextEncoderStream();
-    const writableStreamClosed = textEncoder.readable.pipeTo(printerPort.writable);
-    printerWriter = textEncoder.writable.getWriter();
-
-    // 接続成功
-    updatePrinterStatus(true);
-    console.log('プリンター接続成功');
-
-  } catch (err) {
-    console.error('プリンター接続エラー:', err);
-    alert('プリンター接続に失敗しました: ' + err.message);
-    updatePrinterStatus(false);
-  }
-}
-
-// プリンター状態表示更新
-function updatePrinterStatus(connected) {
-  const statusEl = document.getElementById('printerStatus');
-  const btnEl = document.getElementById('connectPrinterBtn');
-  
-  if (connected) {
-    statusEl.textContent = '接続済み';
-    statusEl.className = 'printer-status-text connected';
-    btnEl.textContent = '🖨️ 接続済み';
-    btnEl.disabled = true;
-  } else {
-    statusEl.textContent = '未接続';
-    statusEl.className = 'printer-status-text';
-    btnEl.textContent = '🖨️ プリンター接続';
-    btnEl.disabled = false;
-  }
-}
-
-// ESC/POSコマンド送信
+// ESC/POSコマンドをローカルサーバー経由で送信
 async function sendESCPOS(commands) {
   try {
     const bytes = new Uint8Array(commands.length);
@@ -869,10 +819,6 @@ async function sendESCPOS(commands) {
 
 // レシート印刷
 async function printReceipt(record) {
-  // ESC/POSコマンド生成
-  const ESC = '\x1B';
-
-  // ESC/POSコマンド生成
   const ESC = '\x1B';
   const GS = '\x1D';
   
@@ -888,9 +834,9 @@ async function printReceipt(record) {
   receipt += ESC + 'a' + '\x01';
   
   // タイトル（2倍角）
-  receipt += ESC + '!' + '\x30'; // 縦横2倍
+  receipt += ESC + '!' + '\x30';
   receipt += '遅刻記録レシート\n';
-  receipt += ESC + '!' + '\x00'; // 標準に戻す
+  receipt += ESC + '!' + '\x00';
   
   // 罫線
   receipt += '================================\n';
@@ -930,13 +876,45 @@ async function printReceipt(record) {
   receipt += '\n\n';
   
   // カット
-  receipt += GS + 'V' + '\x41' + '\x03'; // パーシャルカット
+  receipt += GS + 'V' + '\x41' + '\x03';
   
   // 送信
   const success = await sendESCPOS(receipt);
-  
   if (success) {
     console.log('レシート印刷完了');
   }
 }
 
+// プリンター状態表示更新（UI互換のため残す）
+function updatePrinterStatus(connected) {
+  const statusEl = document.getElementById('printerStatus');
+  const btnEl = document.getElementById('connectPrinterBtn');
+  
+  if (connected) {
+    statusEl.textContent = '接続済み';
+    statusEl.className = 'printer-status-text connected';
+    btnEl.textContent = '🖨️ 接続済み';
+    btnEl.disabled = true;
+  } else {
+    statusEl.textContent = '未接続';
+    statusEl.className = 'printer-status-text';
+    btnEl.textContent = '🖨️ プリンター接続';
+    btnEl.disabled = false;
+  }
+}
+
+// プリンター接続ボタン（ローカルサーバー方式では不要だが互換のため残す）
+async function connectPrinter() {
+  try {
+    const res = await fetch('http://localhost:3000/print', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: '' })
+    });
+    updatePrinterStatus(true);
+    console.log('印刷サーバー接続確認OK');
+  } catch (err) {
+    alert('印刷サーバーに接続できません。\nサーバーが起動しているか確認してください。\n(node server.js)');
+    updatePrinterStatus(false);
+  }
+}
