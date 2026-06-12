@@ -5,8 +5,8 @@ let reasonList = [];
 let currentStudent = null;
 let selectedReason = null;
 let isSaving = false;
-let studentMasterData = null; // 生徒マスター全データ（メモリ保持）
-let studentMap = null; // 生徒ID → 生徒情報のマップ（高速検索用）
+let studentMasterData = null;
+let studentMap = null;
 
 // 同期管理
 let syncTimer = null;
@@ -27,14 +27,12 @@ window.onload = async function() {
 // ボタンのイベントリスナー設定
 // ============================================================
 function setupButtons() {
-  // 保存ボタン
   document.getElementById('saveBtn').addEventListener('click', function(e) {
     e.preventDefault();
     e.stopPropagation();
     saveRecord();
   });
   
-  // キャンセルボタン
   document.getElementById('cancelBtn').addEventListener('click', function(e) {
     e.preventDefault();
     e.stopPropagation();
@@ -50,19 +48,11 @@ async function loadInitData() {
     const result = await callAPI('getInitData');
     
     if (result && result.success) {
-      // 遅刻理由リスト
       reasonList = result.reasons;
       renderReasons();
-      
-      // 本日の記録
       renderTodayRecords(result.todayRecords);
-      
-      // 門限時刻
       document.getElementById('gateTime').textContent = result.gateTime;
-      
-      // 生徒マスター読み込み
       await loadStudentMaster();
-      
       updateSyncStatus('同期済み', 'success');
     } else {
       console.error('Init data load failed:', result?.error);
@@ -75,15 +65,13 @@ async function loadInitData() {
 }
 
 // ============================================================
-// 生徒マスター読み込み（メモリ保持）
+// 生徒マスター読み込み
 // ============================================================
 async function loadStudentMaster() {
   try {
-    // ローカルストレージから読み込み
     const cached = localStorage.getItem('studentMaster');
     const cacheTime = localStorage.getItem('studentMasterTime');
     
-    // キャッシュが24時間以内なら使用
     if (cached && cacheTime) {
       const age = Date.now() - parseInt(cacheTime);
       if (age < 24 * 60 * 60 * 1000) {
@@ -94,17 +82,13 @@ async function loadStudentMaster() {
       }
     }
     
-    // API から取得
     const result = await callAPI('getStudentMaster');
     
     if (result && result.success) {
       studentMasterData = result.data;
       buildStudentMap();
-      
-      // ローカルストレージに保存
       localStorage.setItem('studentMaster', JSON.stringify(studentMasterData));
       localStorage.setItem('studentMasterTime', Date.now().toString());
-      
       console.log('Student master loaded from API:', studentMasterData.length - 1, 'students');
     }
   } catch (error) {
@@ -113,17 +97,15 @@ async function loadStudentMaster() {
 }
 
 // ============================================================
-// 生徒マップ構築（高速検索用）
+// 生徒マップ構築
 // ============================================================
 function buildStudentMap() {
   studentMap = {};
-  
   if (!studentMasterData) return;
   
   for (let i = 1; i < studentMasterData.length; i++) {
     const row = studentMasterData[i];
     const studentId = row[0] ? row[0].toString() : null;
-    
     if (studentId) {
       studentMap[studentId] = {
         studentId: studentId,
@@ -135,7 +117,6 @@ function buildStudentMap() {
       };
     }
   }
-  
   console.log('Student map built:', Object.keys(studentMap).length, 'students');
 }
 
@@ -145,7 +126,6 @@ function buildStudentMap() {
 function setupBarcodeInput() {
   const input = document.getElementById('barcodeInput');
   
-  // Enter キーで検索
   input.addEventListener('keypress', function(e) {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -153,14 +133,10 @@ function setupBarcodeInput() {
     }
   });
 
-  // 6桁入力で自動検索
   input.addEventListener('input', function(e) {
     let val = e.target.value.trim();
     e.target.value = val.replace(/[^0-9]/g, '');
-    
-    // バーコードリーダーからの入力を想定（高速入力）
     if (e.target.value.length === 6) {
-      // 少し待ってから検索（バーコードリーダーの Enter を待つ）
       setTimeout(() => {
         if (document.getElementById('barcodeInput').value.length === 6) {
           searchStudent();
@@ -175,15 +151,10 @@ function setupBarcodeInput() {
 // ============================================================
 function setupKeyboardShortcuts() {
   document.addEventListener('keydown', function(e) {
-    // モーダルが開いている場合は無視
-    if (document.getElementById('modalOverlay').classList.contains('show')) {
-      return;
-    }
+    if (document.getElementById('modalOverlay').classList.contains('show')) return;
     
-    // 入力欄にフォーカスがある場合は無視
     if (document.activeElement.tagName === 'INPUT' || 
         document.activeElement.tagName === 'TEXTAREA') {
-      // ただし Esc と Enter は処理する
       if (e.key === 'Escape') {
         e.preventDefault();
         resetForm();
@@ -197,39 +168,22 @@ function setupKeyboardShortcuts() {
       return;
     }
     
-    // 生徒情報が表示されている場合のみショートカット有効
-    if (!currentStudent) {
-      return;
-    }
+    if (!currentStudent) return;
     
-    // 数字キー 1〜9 で理由選択
     if (e.key >= '1' && e.key <= '9') {
       const index = parseInt(e.key) - 1;
-      if (index < reasonList.length) {
-        selectReason(index);
-      }
+      if (index < reasonList.length) selectReason(index);
     }
-    
-    // Enter で保存
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      saveRecord();
-    }
-    
-    // Esc でキャンセル
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      resetForm();
-    }
+    if (e.key === 'Enter') { e.preventDefault(); saveRecord(); }
+    if (e.key === 'Escape') { e.preventDefault(); resetForm(); }
   });
 }
 
 // ============================================================
-// 生徒検索（メモリ内検索）
+// 生徒検索
 // ============================================================
 async function searchStudent() {
   const val = document.getElementById('barcodeInput').value.trim();
-  const input = document.getElementById('barcodeInput');
   
   if (val.length !== 6) {
     flashInput('error');
@@ -237,7 +191,6 @@ async function searchStudent() {
     return;
   }
 
-  // メモリ内検索（超高速）
   if (studentMap && studentMap[val]) {
     currentStudent = studentMap[val];
     displayStudent(currentStudent);
@@ -245,9 +198,7 @@ async function searchStudent() {
     return;
   }
   
-  // メモリになければ API で検索
   showAlert('info', '検索中...');
-  
   const result = await callAPI('getStudentInfo', { studentId: val });
   
   if (result && result.success) {
@@ -266,23 +217,20 @@ async function searchStudent() {
 // 生徒情報表示
 // ============================================================
 function displayStudent(student) {
-  // クラス情報のみを表示
   document.getElementById('studentDisplay').textContent = student.studentInfo;
 }
 
 // ============================================================
-// 入力欄のフラッシュ効果
+// フラッシュ効果
 // ============================================================
 function flashInput(type) {
   const input = document.getElementById('barcodeInput');
   input.classList.add(type);
-  setTimeout(() => {
-    input.classList.remove(type);
-  }, 300);
+  setTimeout(() => input.classList.remove(type), 300);
 }
 
 // ============================================================
-// 遅刻理由読み込み
+// 遅刻理由表示
 // ============================================================
 function renderReasons() {
   const grid = document.getElementById('reasonGrid');
@@ -292,10 +240,9 @@ function renderReasons() {
     (function(reason, index) {
       const btn = document.createElement('button');
       btn.className = 'reason-btn';
-      btn.type = 'button';  // 重要：type="button" を設定
+      btn.type = 'button';
       btn.tabIndex = 2 + index;
       
-      // ショートカットキー表示（1〜9のみ）
       if (index < 9) {
         const shortcutKey = document.createElement('span');
         shortcutKey.className = 'shortcut-key';
@@ -303,16 +250,12 @@ function renderReasons() {
         btn.appendChild(shortcutKey);
       }
       
-      const text = document.createTextNode(reason.display);
-      btn.appendChild(text);
-      
-      // イベントリスナーで処理
+      btn.appendChild(document.createTextNode(reason.display));
       btn.addEventListener('click', function(e) {
         e.preventDefault();
         e.stopPropagation();
         selectReason(index);
       });
-      
       grid.appendChild(btn);
     })(reasonList[i], i);
   }
@@ -323,17 +266,12 @@ function renderReasons() {
 // ============================================================
 function selectReason(index) {
   if (index < 0 || index >= reasonList.length) return;
-  
   selectedReason = reasonList[index];
   
-  // 選択状態を更新
   const allBtns = document.querySelectorAll('.reason-btn');
-  for (let i = 0; i < allBtns.length; i++) {
-    allBtns[i].classList.remove('selected');
-  }
+  for (let i = 0; i < allBtns.length; i++) allBtns[i].classList.remove('selected');
   allBtns[index].classList.add('selected');
   
-  // 詳細入力の必須チェック
   const detailInput = document.getElementById('detailInput');
   if (selectedReason.display === 'その他') {
     detailInput.placeholder = '詳細（必須）';
@@ -346,25 +284,16 @@ function selectReason(index) {
 }
 
 // ============================================================
-// 記録保存（IndexedDB + 非同期送信）
+// 記録保存
 // ============================================================
 async function saveRecord() {
   if (isSaving) return;
-  if (!currentStudent) {
-    showAlert('error', '生徒情報が取得されていません');
-    return;
-  }
-  if (!selectedReason) {
-    showAlert('error', '遅刻理由を選択してください');
-    return;
-  }
+  if (!currentStudent) { showAlert('error', '生徒情報が取得されていません'); return; }
+  if (!selectedReason) { showAlert('error', '遅刻理由を選択してください'); return; }
 
   const detail = document.getElementById('detailInput').value.trim();
   if (selectedReason.display === 'その他' && !detail) {
-    showModalAlert(
-      '詳細の入力が必要です',
-      '「その他」を選択した場合は、詳細欄に遅刻理由を具体的に入力してください。'
-    );
+    showModalAlert('詳細の入力が必要です', '「その他」を選択した場合は、詳細欄に遅刻理由を具体的に入力してください。');
     return;
   }
 
@@ -390,25 +319,13 @@ async function saveRecord() {
   };
 
   try {
-    // 1. IndexedDB に即座に保存
     await saveToLocal(recordData);
-    
-    // 2. 本日の記録に追加（UI更新）
     addRecordToUI(recordData);
-    
-    // 3. 成功表示
     showAlert('success', '✓ 記録を保存しました');
     flashInput('success');
-    
-    // 4. レシート印刷
-    await print(recordData);
-    
-    // 5. フォームリセット
+    await printReceipt(recordData);
     resetForm();
-    
-    // 6. バックグラウンドで同期（非同期）
     syncInBackground();
-    
   } catch (error) {
     showAlert('error', '保存に失敗しました: ' + error.toString());
     saveBtn.disabled = false;
@@ -424,10 +341,8 @@ async function saveRecord() {
 // ============================================================
 async function syncInBackground() {
   updateSyncStatus('同期中...', 'syncing');
-  
   try {
     const result = await syncPendingRecords();
-    
     if (result.success) {
       if (result.synced > 0) {
         console.log('Synced', result.synced, 'records');
@@ -437,9 +352,7 @@ async function syncInBackground() {
       console.error('Sync failed:', result.error);
       updateSyncStatus('同期エラー', 'error');
     }
-    
     await updatePendingCount();
-    
   } catch (error) {
     console.error('Sync error:', error);
     updateSyncStatus('同期エラー', 'error');
@@ -450,7 +363,6 @@ async function syncInBackground() {
 // 定期同期タイマー
 // ============================================================
 function startSyncTimer() {
-  // 30秒ごとに同期
   syncTimer = setInterval(async () => {
     const count = await getPendingCount();
     if (count > 0) {
@@ -467,11 +379,9 @@ function addRecordToUI(recordData) {
   const list = document.getElementById('recordsList');
   const count = document.getElementById('recordCount');
   
-  // ローディング削除
   const loading = list.querySelector('.loading');
   if (loading) loading.remove();
   
-  // 新しいレコードを追加
   const item = document.createElement('div');
   item.className = 'record-item pending';
   
@@ -486,11 +396,8 @@ function addRecordToUI(recordData) {
     </div>
     <div class="record-time">${hh}:${mm}</div>
   `;
-  
-  // 先頭に追加
   list.insertBefore(item, list.firstChild);
   
-  // カウント更新
   const currentCount = parseInt(count.textContent) || 0;
   count.textContent = (currentCount + 1) + '件';
 }
@@ -501,17 +408,12 @@ function addRecordToUI(recordData) {
 function resetForm() {
   currentStudent = null;
   selectedReason = null;
-  
   document.getElementById('barcodeInput').value = '';
-  
-  // 生徒情報表示をクリア
   document.getElementById('studentDisplay').textContent = '－';
   
-  // 理由ボタンの選択状態を確実にクリア
-  const reasonBtns = document.querySelectorAll('.reason-btn');
-  reasonBtns.forEach(btn => {
+  document.querySelectorAll('.reason-btn').forEach(btn => {
     btn.classList.remove('selected');
-    btn.blur(); // フォーカスも解除
+    btn.blur();
   });
   
   const detailInput = document.getElementById('detailInput');
@@ -521,12 +423,9 @@ function resetForm() {
   
   document.getElementById('hasPhoneCall').checked = false;
   document.getElementById('hasStudentCard').checked = false;
-  
   document.getElementById('saveBtn').disabled = false;
   document.getElementById('cancelBtn').disabled = false;
   document.getElementById('saveBtn').textContent = '記録を保存';
-  
-  // フォーカスを戻す
   document.getElementById('barcodeInput').focus();
 }
 
@@ -536,7 +435,6 @@ function resetForm() {
 function renderTodayRecords(records) {
   const list = document.getElementById('recordsList');
   const count = document.getElementById('recordCount');
-  
   count.textContent = records.length + '件';
   
   if (records.length === 0) {
@@ -548,11 +446,9 @@ function renderTodayRecords(records) {
   records.forEach(rec => {
     const item = document.createElement('div');
     item.className = 'record-item';
-    
     const time = new Date(rec.timestamp);
     const hh = time.getHours();
     const mm = String(time.getMinutes()).padStart(2, '0');
-    
     item.innerHTML = `
       <div class="record-info">
         <div class="record-student">${rec.studentInfo} ${rec.name}</div>
@@ -571,9 +467,7 @@ function updateSyncStatus(text, status) {
   const statusEl = document.getElementById('syncStatus');
   statusEl.textContent = text;
   statusEl.className = 'sync-status';
-  if (status) {
-    statusEl.classList.add(status);
-  }
+  if (status) statusEl.classList.add(status);
 }
 
 // ============================================================
@@ -582,7 +476,6 @@ function updateSyncStatus(text, status) {
 async function updatePendingCount() {
   const count = await getPendingCount();
   const pendingEl = document.getElementById('pendingCount');
-  
   if (count > 0) {
     pendingEl.textContent = `未送信: ${count}件`;
     pendingEl.classList.remove('hidden');
@@ -598,9 +491,7 @@ function showAlert(type, message) {
   const box = document.getElementById('alertBox');
   box.className = 'alert alert-' + type;
   box.textContent = message;
-  setTimeout(() => {
-    if (type !== 'info') box.className = 'hidden';
-  }, 5000);
+  setTimeout(() => { if (type !== 'info') box.className = 'hidden'; }, 5000);
 }
 
 function showModalAlert(title, message) {
@@ -620,74 +511,50 @@ function closeModalAlert() {
 let isBatchMode = false;
 let batchProcessedCount = 0;
 
-// バッチモードに切り替え
 function switchToBatchMode() {
   isBatchMode = true;
   batchProcessedCount = 0;
-  
   document.getElementById('normalMode').classList.add('hidden');
   document.getElementById('batchMode').classList.remove('hidden');
-  
   document.getElementById('batchBarcodeInput').focus();
-  
   setupBatchBarcodeInput();
 }
 
-// 通常モードに戻る
 function switchToNormalMode() {
   isBatchMode = false;
   batchProcessedCount = 0;
-  
   document.getElementById('batchMode').classList.add('hidden');
   document.getElementById('normalMode').classList.remove('hidden');
-  
-  // バッチモードの入力をクリア
   document.getElementById('batchBarcodeInput').value = '';
   document.getElementById('batchRecordsList').innerHTML = '<div class="batch-empty">まだ処理されていません</div>';
   document.getElementById('batchProcessedCount').textContent = '0';
-  
   document.getElementById('barcodeInput').focus();
 }
 
-// バッチモード用のバーコード入力設定
 function setupBatchBarcodeInput() {
   const input = document.getElementById('batchBarcodeInput');
-  
-  // 既存のイベントリスナーを削除するため、クローンで置き換え
   const newInput = input.cloneNode(true);
   input.parentNode.replaceChild(newInput, input);
   
   newInput.addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      processBatchBarcode();
-    }
+    if (e.key === 'Enter') { e.preventDefault(); processBatchBarcode(); }
   });
   
   newInput.addEventListener('input', function(e) {
     let val = e.target.value.trim();
     e.target.value = val.replace(/[^0-9]/g, '');
-    
     if (e.target.value.length === 6) {
       setTimeout(() => {
-        if (document.getElementById('batchBarcodeInput').value.length === 6) {
-          processBatchBarcode();
-        }
+        if (document.getElementById('batchBarcodeInput').value.length === 6) processBatchBarcode();
       }, 100);
     }
   });
 }
 
-// バッチモードでバーコードを処理（遅延15分以上固定）
 async function processBatchBarcode() {
   const val = document.getElementById('batchBarcodeInput').value.trim();
+  if (val.length !== 6) { showAlert('error', '生徒証番号は6桁で入力してください'); return; }
   
-  if (val.length !== 6) {
-    showAlert('error', '生徒証番号は6桁で入力してください');
-    return;
-  }
-  
-  // 生徒情報を取得
   let student = null;
   if (studentMap && studentMap[val]) {
     student = studentMap[val];
@@ -702,7 +569,6 @@ async function processBatchBarcode() {
     }
   }
   
-  // 遅延（15分以上）の理由を自動設定
   let delayReason = null;
   for (let i = 0; i < reasonList.length; i++) {
     if (reasonList[i].display.includes('遅延') && reasonList[i].display.includes('15分以上')) {
@@ -711,12 +577,8 @@ async function processBatchBarcode() {
     }
   }
   
-  if (!delayReason) {
-    showAlert('error', '遅延（15分以上）の理由が見つかりません');
-    return;
-  }
+  if (!delayReason) { showAlert('error', '遅延（15分以上）の理由が見つかりません'); return; }
   
-  // 記録データを作成
   const recordData = {
     studentId: student.studentId,
     studentInfo: student.studentInfo,
@@ -732,57 +594,35 @@ async function processBatchBarcode() {
   };
   
   try {
-    // IndexedDB に保存
     await saveToLocal(recordData);
-    
-    // レシート印刷
-    await print(recordData);
-    
-    // UIに追加
+    await printReceipt(recordData);
     addBatchRecordToUI(recordData);
-    
-    // 本日の記録にも追加
     addRecordToUI(recordData);
-    
-    // カウント更新
     batchProcessedCount++;
     document.getElementById('batchProcessedCount').textContent = batchProcessedCount;
-    
-    // 入力欄をクリア
     document.getElementById('batchBarcodeInput').value = '';
-    
-    // バックグラウンド同期
     syncInBackground();
-    
   } catch (error) {
     showAlert('error', '保存に失敗しました: ' + error.toString());
   }
 }
 
-// バッチモードのUIにレコードを追加
 function addBatchRecordToUI(recordData) {
   const list = document.getElementById('batchRecordsList');
-  
-  // 空メッセージを削除
   const empty = list.querySelector('.batch-empty');
   if (empty) empty.remove();
   
-  // 新しいレコードを追加
   const item = document.createElement('div');
   item.className = 'batch-record-item';
-  
   const now = new Date();
   const hh = now.getHours();
   const mm = String(now.getMinutes()).padStart(2, '0');
-  
   item.innerHTML = `
     <div class="batch-record-info">
       <div class="batch-record-student">${recordData.studentInfo} ${recordData.name}</div>
     </div>
     <div class="batch-record-time">${hh}:${mm}</div>
   `;
-  
-  // 先頭に追加
   list.insertBefore(item, list.firstChild);
 }
 
@@ -790,18 +630,13 @@ function addBatchRecordToUI(recordData) {
    印刷処理（ローカルサーバー経由）
 ======================================== */
 
-// ESC/POSコマンドをローカルサーバー経由で送信
 async function sendESCPOS(commands) {
   try {
-    // 文字列をそのままUTF-8のBase64で送る（Shift-JIS変換はサーバー側）
-    const encoded = encodeURIComponent(commands);
-
     const res = await fetch('http://localhost:3000/print', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: commands })
     });
-
     const result = await res.json();
     if (!result.ok) {
       console.error('印刷サーバーエラー:', result.error);
@@ -814,43 +649,57 @@ async function sendESCPOS(commands) {
   }
 }
 
-// レシート印刷
-async function print(record) {
+async function printReceipt(record) {
   const ESC = '\x1B';
   const GS = '\x1D';
   
-  let  = '';
-   += ESC + '@';
-   += ESC + 'a' + '\x00';
-  // 文字コードページをShift-JIS（カタカナ・漢字）に設定
-  receipt += ESC + 't' + '\x08';  // ← この行を追加（PC437→Shift-JIS切り替え）
+  let receipt = '';
+  
+  // 初期化
+  receipt += ESC + '@';
+  
+  // 左揃え
+  receipt += ESC + 'a' + '\x00';
+  
+  // 文字コードページ: Shift-JIS
+  receipt += ESC + 't' + '\x08';
   
   // 漢字モードON
-  receipt += '\x1C' + '&';        // ← この行も追加
+  receipt += '\x1C' + '&';
   
   const now = new Date();
   const dateStr = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}`;
   const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
   
   receipt += '================================\n';
-  receipt += `Time: ${dateStr} ${timeStr}\n`;
-  receipt += `Info: ${record.studentInfo}\n`;
-  receipt += `Reason: ${record.reasonText}\n`;
-  receipt += `Tel: ${record.hasPhoneCall ? 'YES' : 'NO'}\n`;
-  receipt += `Card: ${record.hasStudentCard ? 'YES' : 'NO'}\n`;
+  receipt += `登録時間: ${dateStr} ${timeStr}\n`;
+  receipt += '--------------------------------\n';
+  receipt += `生徒情報: ${record.studentInfo}\n`;
+  receipt += '--------------------------------\n';
+  receipt += `遅刻理由: ${record.reasonText}\n`;
+  receipt += '--------------------------------\n';
+  
+  if (record.detail && record.detail.trim()) {
+    receipt += `備考: ${record.detail}\n`;
+    receipt += '--------------------------------\n';
+  }
+  
+  receipt += `電話連絡: ${record.hasPhoneCall ? 'あり' : 'なし'}\n`;
+  receipt += `生徒証  : ${record.hasStudentCard ? 'あり' : 'なし'}\n`;
   receipt += '================================\n';
   receipt += '\n\n\n';
+  
+  // カット
   receipt += GS + 'V' + '\x00';
   
   const success = await sendESCPOS(receipt);
   if (success) console.log('レシート印刷完了');
 }
 
-// プリンター状態表示更新（UI互換のため残す）
+// プリンター状態表示（UI互換のため残す）
 function updatePrinterStatus(connected) {
   const statusEl = document.getElementById('printerStatus');
   const btnEl = document.getElementById('connectPrinterBtn');
-  
   if (connected) {
     statusEl.textContent = '接続済み';
     statusEl.className = 'printer-status-text connected';
@@ -864,13 +713,12 @@ function updatePrinterStatus(connected) {
   }
 }
 
-// プリンター接続ボタン（ローカルサーバー方式では不要だが互換のため残す）
 async function connectPrinter() {
   try {
     const res = await fetch('http://localhost:3000/print', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: '' })
+      body: JSON.stringify({ text: '' })
     });
     updatePrinterStatus(true);
     console.log('印刷サーバー接続確認OK');
