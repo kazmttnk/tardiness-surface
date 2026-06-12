@@ -662,7 +662,7 @@ async function printReceipt(record) {
   receipt += ESC + 'a' + '\x00';
   
   // 文字コードページ: Shift-JIS
-  receipt += ESC + 't' + '\x08';
+  receipt += ESC + 't' + '\x00';
   
   // 漢字モードON
   receipt += '\x1C' + '&';
