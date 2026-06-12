@@ -401,7 +401,7 @@ async function saveRecord() {
     flashInput('success');
     
     // 4. レシート印刷
-    await printReceipt(recordData);
+    await print(recordData);
     
     // 5. フォームリセット
     resetForm();
@@ -736,7 +736,7 @@ async function processBatchBarcode() {
     await saveToLocal(recordData);
     
     // レシート印刷
-    await printReceipt(recordData);
+    await print(recordData);
     
     // UIに追加
     addBatchRecordToUI(recordData);
@@ -815,15 +815,15 @@ async function sendESCPOS(commands) {
 }
 
 // レシート印刷
-async function printReceipt(record) {
+async function print(record) {
   const ESC = '\x1B';
   const GS = '\x1D';
   
-  let receipt = '';
-  receipt += ESC + '@';
-  receipt += ESC + 'a' + '\x00';
+  let  = '';
+   += ESC + '@';
+   += ESC + 'a' + '\x00';
   // 文字コードページをShift-JIS（カタカナ・漢字）に設定
-  receipt += ESC + 't' + '\x01';  // ← この行を追加（PC437→Shift-JIS切り替え）
+  receipt += ESC + 't' + '\x08';  // ← この行を追加（PC437→Shift-JIS切り替え）
   
   // 漢字モードON
   receipt += '\x1C' + '&';        // ← この行も追加
