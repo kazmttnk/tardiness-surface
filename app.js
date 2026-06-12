@@ -820,66 +820,25 @@ async function printReceipt(record) {
   const GS = '\x1D';
   
   let receipt = '';
-  
-  // 初期化
   receipt += ESC + '@';
-  
-  // 文字サイズ標準
-  receipt += ESC + '!' + '\x00';
-  
-  // センター揃え
-  receipt += ESC + 'a' + '\x01';
-  
-  // タイトル（2倍角）
-  receipt += ESC + '!' + '\x30';
-  receipt += '遅刻記録レシート\n';
-  receipt += ESC + '!' + '\x00';
-  
-  // 罫線
-  receipt += '================================\n';
-  
-  // 左揃え
   receipt += ESC + 'a' + '\x00';
   
-  // 登録時間
-  const timestamp = new Date(record.timestamp);
-  const dateStr = `${timestamp.getFullYear()}/${String(timestamp.getMonth()+1).padStart(2,'0')}/${String(timestamp.getDate()).padStart(2,'0')}`;
-  const timeStr = `${String(timestamp.getHours()).padStart(2,'0')}:${String(timestamp.getMinutes()).padStart(2,'0')}`;
-  receipt += `登録時間: ${dateStr} ${timeStr}\n`;
-  receipt += '--------------------------------\n';
+  const now = new Date();
+  const dateStr = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}`;
+  const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
   
-  // 生徒情報
-  receipt += `生徒情報: ${record.studentInfo}\n`;
-  receipt += '--------------------------------\n';
-  
-  // 遅刻理由
-  receipt += `遅刻理由: ${record.reasonText}\n`;
-  receipt += '--------------------------------\n';
-  
-  // 備考
-  if (record.detail && record.detail.trim()) {
-    receipt += `備考: ${record.detail}\n`;
-    receipt += '--------------------------------\n';
-  }
-  
-  // 電話連絡・生徒証
-  receipt += `電話連絡: ${record.hasPhoneCall ? 'あり' : 'なし'}\n`;
-  receipt += `生徒証  : ${record.hasStudentCard ? 'あり' : 'なし'}\n`;
-  
-  // 罫線
   receipt += '================================\n';
+  receipt += `Time: ${dateStr} ${timeStr}\n`;
+  receipt += `Info: ${record.studentInfo}\n`;
+  receipt += `Reason: ${record.reasonText}\n`;
+  receipt += `Tel: ${record.hasPhoneCall ? 'YES' : 'NO'}\n`;
+  receipt += `Card: ${record.hasStudentCard ? 'YES' : 'NO'}\n`;
+  receipt += '================================\n';
+  receipt += '\n\n\n';
+  receipt += GS + 'V' + '\x00';
   
-  // 改行
-  receipt += '\n\n';
-  
-  // カット
-  receipt += GS + 'V' + '\x41' + '\x03';
-  
-  // 送信
   const success = await sendESCPOS(receipt);
-  if (success) {
-    console.log('レシート印刷完了');
-  }
+  if (success) console.log('レシート印刷完了');
 }
 
 // プリンター状態表示更新（UI互換のため残す）
