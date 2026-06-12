@@ -822,6 +822,11 @@ async function printReceipt(record) {
   let receipt = '';
   receipt += ESC + '@';
   receipt += ESC + 'a' + '\x00';
+  // 文字コードページをShift-JIS（カタカナ・漢字）に設定
+  receipt += ESC + 't' + '\x01';  // ← この行を追加（PC437→Shift-JIS切り替え）
+  
+  // 漢字モードON
+  receipt += '\x1C' + '&';        // ← この行も追加
   
   const now = new Date();
   const dateStr = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}`;
