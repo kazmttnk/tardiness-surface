@@ -650,39 +650,30 @@ async function sendESCPOS(commands) {
 }
 
 async function printReceipt(record) {
-  const ESC = '\x1B';
-  const GS = '\x1D';
-  
-  let receipt = '';
-  
-  // 初期化
-  receipt += ESC + '@';
-  
-  // 左揃え
-  receipt += ESC + 'a' + '\x00';
-  
-  // 文字コードページ: Shift-JIS
-  receipt += ESC + 't' + '\x00';
-  
-  // 漢字モードON
-  receipt += '\x1C' + '&';
-  
   const now = new Date();
   const dateStr = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}`;
   const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
   
-  receipt += '================================\n';
-  receipt += `登録時間: ${dateStr} ${timeStr}\n`;
-  receipt += '--------------------------------\n';
-  receipt += `生徒情報: ${record.studentInfo}\n`;
-  receipt += '--------------------------------\n';
-  receipt += `遅刻理由: ${record.reasonText}\n`;
-  receipt += '--------------------------------\n';
-  
+  let text = '';
+  text += '================================\n';
+  text += `登録時間: ${dateStr} ${timeStr}\n`;
+  text += '--------------------------------\n';
+  text += `生徒情報: ${record.studentInfo}\n`;
+  text += '--------------------------------\n';
+  text += `遅刻理由: ${record.reasonText}\n`;
+  text += '--------------------------------\n';
   if (record.detail && record.detail.trim()) {
-    receipt += `備考: ${record.detail}\n`;
-    receipt += '--------------------------------\n';
+    text += `備考: ${record.detail}\n`;
+    text += '--------------------------------\n';
   }
+  text += `電話連絡: ${record.hasPhoneCall ? 'あり' : 'なし'}\n`;
+  text += `生徒証  : ${record.hasStudentCard ? 'あり' : 'なし'}\n`;
+  text += '================================\n';
+  text += '\n\n\n';
+  
+  const success = await sendESCPOS(text);
+  if (success) console.log('レシート印刷完了');
+}
   
   receipt += `電話連絡: ${record.hasPhoneCall ? 'あり' : 'なし'}\n`;
   receipt += `生徒証  : ${record.hasStudentCard ? 'あり' : 'なし'}\n`;
